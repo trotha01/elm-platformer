@@ -24,15 +24,20 @@ type alias Rect =
 
 
 type alias Player =
-    Rect
+    { dim : Rect
+    , yVel : Float
+    }
 
 
 initPlayer : Player
 initPlayer =
-    { x = 10
-    , y = 100
-    , width = 10
-    , height = 10
+    { dim =
+        { x = 10
+        , y = 100
+        , width = 10
+        , height = 10
+        }
+    , yVel = 0
     }
 
 
@@ -40,12 +45,16 @@ initPlayer =
     ( 400, 600 )
 
 
+wallThickness =
+    10
+
+
 ground : Rect
 ground =
     { x = 0
     , y = viewportHeight
     , width = viewportWidth
-    , height = 2
+    , height = wallThickness
     }
 
 
@@ -53,7 +62,7 @@ leftWall : Rect
 leftWall =
     { x = 0
     , y = 0
-    , width = 2
+    , width = wallThickness
     , height = viewportHeight
     }
 
@@ -62,7 +71,7 @@ rightWall : Rect
 rightWall =
     { x = viewportWidth
     , y = 0
-    , width = 2
+    , width = wallThickness
     , height = viewportHeight
     }
 
@@ -108,23 +117,41 @@ speed =
     0.2
 
 
+gravity : Float
+gravity =
+    0.005
+
+
 updatePlayer : Time -> Arrows -> List Rect -> Player -> Player
 updatePlayer delta arrows rects player =
     let
+        playerDim =
+            player.dim
+
         desiredX =
-            player.x + round (delta * speed * toFloat arrows.x)
+            playerDim.x + round (delta * speed * toFloat arrows.x)
+
+        desiredYVel =
+            if arrows.y == 1 && round player.yVel == 0 then
+                -3
+            else
+                player.yVel + (delta * gravity)
 
         desiredY =
-            player.y + round (delta * speed * toFloat -arrows.y)
+            playerDim.y + round desiredYVel
+
+        -- |> (\y -> y + round (delta * speed * toFloat -arrows.y))
+        desiredDim =
+            { playerDim | x = desiredX, y = desiredY }
 
         desiredPlayer =
-            { player | x = desiredX, y = desiredY }
+            { player | dim = desiredDim, yVel = desiredYVel }
 
         isColliding =
-            List.any (collidesWith desiredPlayer) rects
+            List.any (collidesWith desiredDim) rects
     in
     if isColliding then
-        player
+        { player | yVel = 0 }
     else
         desiredPlayer
 
@@ -161,8 +188,8 @@ viewPlayer player =
             , ( "height", "10px" )
             , ( "border", "1px solid blue" )
             , ( "background", "lightblue" )
-            , ( "left", px player.x )
-            , ( "top", px player.y )
+            , ( "left", px player.dim.x )
+            , ( "top", px player.dim.y )
             ]
         ]
         []
